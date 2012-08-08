@@ -29,7 +29,7 @@ use Data::Dumper ;
 
 use vars qw($PROGNAME);
 use Getopt::Long;
-use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_d $opt_i);
+use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_d $opt_i $opt_authproto $opt_priv $opt_privproto);
 use constant true  => "1" ;
 use constant false => "0" ;
 $PROGNAME = $0;
@@ -48,7 +48,10 @@ GetOptions
     ("h"   => \$opt_h, "help"         => \$opt_h,
      "u=s" => \$opt_u, "username=s"   => \$opt_u,
      "p=s" => \$opt_p, "password=s"   => \$opt_p,
+                       "authprotocol=s" => \$opt_authproto,
      "k=s" => \$opt_k, "key=s"        => \$opt_k,
+                       "priv=s"       => \$opt_priv,
+                       "privprotocol=s" => \$opt_privproto,
      "V"   => \$opt_V, "version"      => \$opt_V,
      "v=s" => \$opt_v, "snmp=s"       => \$opt_v,
      "C=s" => \$opt_C, "community=s"  => \$opt_C,
@@ -100,11 +103,18 @@ $name =~ s/\.pl.*//g;
 my ($session, $error);
 if ($snmp eq "1" || $snmp eq "2") {
 	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -community => $opt_C, -version => $snmp, -maxmsgsize => "5000");
-}elsif ($opt_k) {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp, -username => $opt_u, -authkey => $opt_k, -maxmsgsize => "5000");
+}elsif ($opt_p && $opt_priv && $opt_authproto && $opt_privproto) {
+	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -authprotocol => $opt_authproto, -privpassword => $opt_priv, -privprotocol => $opt_privproto, -maxmsgsize => "5000");
+}elsif ($opt_p && $opt_priv) {
+	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -privpassword => $opt_priv, -maxmsgsize => "5000");
+}elsif ($opt_p && $opt_authproto) {
+	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -authprotocol => $opt_authproto, -maxmsgsize => "5000");
 }elsif ($opt_p) {
 	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -maxmsgsize => "5000");
+}elsif ($opt_k) {
+	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp, -username => $opt_u, -authkey => $opt_k, -maxmsgsize => "5000");
 }
+
 # check that session opened
 if (!defined($session)) {
     print("UNKNOWN: SNMP Session : $error\n");
@@ -206,9 +216,13 @@ sub print_usage () {
     print "                     used with SNMP v1 and v2c\n";
     print "   -v (--snmp_version)  1 for SNMP v1 (default)\n";
     print "                        2 for SNMP v2c\n";
+    print "                        3 for SNMP v3\n";
     print "   -k (--key)        snmp V3 key\n";
     print "   -p (--password)   snmp V3 password\n";
     print "   -u (--username)   snmp v3 username \n";
+    print "   --authprotocol    snmp v3 authprotocol md5|sha \n";
+    print "   --priv            snmp V3 priv password\n";
+    print "   --privprotocol    snmp v3 privprotocol des|aes \n";
     print "   -V (--version)    Plugin version\n";
     print "   -h (--help)       usage help\n\n" ;
     print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
