@@ -190,8 +190,12 @@ while((my $id,$cpu) = each(%nexus_cpu)) {
 		my $critical_level=$total_memory*$opt_c/100 ;
 		$label.="cpu${id}-memory_used=${memory_used}kb,cpu${id}-memory_free=${memory_free}kb " ;		
 		push(@perfparse, "cpu${id}-memory_used=${memory_used}kb;$warning_level;$critical_level;0;$total_memory cpu${id}-memory_free=${memory_free}kb;;;;") ;
-
-
+		if ($memory_used > $warning_level) {
+			$return_code = $ERRORS{'WARNING'}
+			}
+		if ($memory_used > $critical_level) {
+			$return_code = $ERRORS{'CRITICAL'}
+			}
     }
 }
 
