@@ -189,15 +189,15 @@ while((my $id,$cpu) = each(%nexus_cpu)) {
 		my $one_min  = $cpu_data{&cpmCPUTotal1minRev} ;
 		my $five_min = $cpu_data{&cpmCPUTotal5minRev} ;
 
-		if (($five_sec > $warning_threshold[&THRESHOLD_5_SECONDS]) && ($one_min > $warning_threshold[&THRESHOLD_1_MINUTE]) && ($five_min > $warning_threshold[&THRESHOLD_5_MINUTES])) {
-			if (($five_sec > $critical_threshold[&THRESHOLD_5_SECONDS]) && ($one_min > $critical_threshold[&THRESHOLD_1_MINUTE]) && ($five_min > $critical_threshold[&THRESHOLD_5_MINUTES])) {
+		if (($five_sec > $warning_threshold[&THRESHOLD_5_SECONDS]) || ($one_min > $warning_threshold[&THRESHOLD_1_MINUTE]) || ($five_min > $warning_threshold[&THRESHOLD_5_MINUTES])) {
+			if (($five_sec > $critical_threshold[&THRESHOLD_5_SECONDS]) || ($one_min > $critical_threshold[&THRESHOLD_1_MINUTE]) || ($five_min > $critical_threshold[&THRESHOLD_5_MINUTES])) {
 				$return_code = $ERRORS{'CRITICAL'} ;
 			}else {
 				$return_code = $ERRORS{'WARNING'} ;
 			}
 		}
 		$label.="cpu${id}-5_seconds=$five_sec%,cpu${id}-1_minute=$one_min%,cpu${id}-5_minutes=$five_min% " ;		
-		push(@perfparse, "cpu${id}-5_seconds=$five_sec%;;;; cpu${id}-1_minute=$one_min%;;;; cpu${id}-5_minutes=$five_min%;;;;") ;
+		push(@perfparse, "cpu${id}-5_seconds=$five_sec%;$warning_threshold[&THRESHOLD_5_SECONDS];$critical_threshold[&THRESHOLD_5_SECONDS];0;100 cpu${id}-1_minute=$one_min%;$warning_threshold[&THRESHOLD_1_MINUTE];$critical_threshold[&THRESHOLD_1_MINUTE];0;100 cpu${id}-5_minutes=$five_min%;$warning_threshold[&THRESHOLD_5_MINUTES];$critical_threshold[&THRESHOLD_5_MINUTES];0;100") ;
     }
 }
 
