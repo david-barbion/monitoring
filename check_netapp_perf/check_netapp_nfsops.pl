@@ -17,7 +17,6 @@
 #
 
 use strict;
-use Switch ;
 use List::Util qw[min max];
 use Net::SNMP qw(:snmp);
 use FindBin;
@@ -74,21 +73,21 @@ $opt_H = shift unless ($opt_H);
 
 my $snmp = "1";
 if ($opt_v && $opt_v =~ /^[0-9]$/) {
-	$snmp = $opt_v;
+     $snmp = $opt_v;
 }
 
 if ($snmp eq "3") {
-	if (!$opt_u) {
-		print "Option -u (--username) is required for snmpV3\n";
-		exit $ERRORS{'OK'};
-	}
-	if (!$opt_p && !$opt_k) {
-		print "Option -k (--key) or -p (--password) is required for snmpV3\n";
-		exit $ERRORS{'OK'};
-	}elsif ($opt_p && $opt_k) {
-		print "Only option -k (--key) or -p (--password) is needed for snmpV3\n";
-		exit $ERRORS{'OK'};
-	}
+    if (!$opt_u) {
+        print "Option -u (--username) is required for snmpV3\n";
+        exit $ERRORS{'OK'};
+    }
+    if (!$opt_p && !$opt_k) {
+        print "Option -k (--key) or -p (--password) is required for snmpV3\n";
+        exit $ERRORS{'OK'};
+    }elsif ($opt_p && $opt_k) {
+        print "Only option -k (--key) or -p (--password) is needed for snmpV3\n";
+        exit $ERRORS{'OK'};
+    }
 }
 
 ($opt_C) || ($opt_C = shift) || ($opt_C = "public");
@@ -100,11 +99,11 @@ $name =~ s/\.pl.*//g;
 
 my ($session, $error);
 if ($snmp eq "1" || $snmp eq "2") {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -community => $opt_C, -version => $snmp, -maxmsgsize => "5000");
+    ($session, $error) = Net::SNMP->session(-hostname => $opt_H, -community => $opt_C, -version => $snmp, -maxmsgsize => "5000");
 }elsif ($opt_k) {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp, -username => $opt_u, -authkey => $opt_k, -maxmsgsize => "5000");
+    ($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp, -username => $opt_u, -authkey => $opt_k, -maxmsgsize => "5000");
 }elsif ($opt_p) {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -maxmsgsize => "5000");
+    ($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p, -maxmsgsize => "5000");
 }
 # check that session opened
 if (!defined($session)) {
@@ -135,13 +134,12 @@ verbose(" sysdescr is ".$sysdescr->{$outlabel_oid}, "5") ;
 my $outlabel = $sysdescr->{$outlabel_oid}.": " ;
 my @nagios_return_code = ("OK", "WARNING", "CRITICAL", "UNKNOWN") ;
 
+###############################
 # define some useful constants
-####################
+###############################
 use constant netapp_nfsops => ".1.3.6.1.4.1.789.1.2.2.27.0" ;
 
-
 ##################### RETRIEVE DATA #######################
-###### get the cpmCPU table
 my $label;
 my $netapp_nfsops=0 ;
 my $mean_netapp_nfsops ;
@@ -165,6 +163,7 @@ if (defined($opt_P)) {
 # retrieve old data store in the cache file
 my %history = get_history($cache_file) ;
 if (!defined($history{'time'})) {
+   # the history file is not found, warn user on the first run and return unknown to nagios
    verbose("First time running", 5) ;
    $label = "Buffer in creation" ;
    $return_code = 3 ;
@@ -185,16 +184,25 @@ if (!defined($history{'time'})) {
    $label .= "nfsops=$mean_netapp_nfsops (${interval_time}s mean)";
    $perfparse{'nfsops'} = $mean_netapp_nfsops;
 }
+# prepare data to be save in the history file
 $history{'time'} = $date_of_measure ;
 $history{'nfsops'} = $current_netapp_nfsops ;
 save_history($cache_file, %history) ;
-###########################################################################################
 
+######################################
+# time to return information to user
+######################################
 print $outlabel.$nagios_return_code[$return_code]." $label |" ;
 print " nfsops=".$perfparse{'nfsops'}."ops;" ;
 print "\n" ;
 exit($return_code) ;
 
+####################################
+# get data from history file
+# history file path passed as $arg1
+# it returns a hash on exit, 
+# feel free to use it for you
+####################################
 sub get_history {
    my $cachefile = $_[0] ;
    my $histvalue ;
@@ -206,11 +214,11 @@ sub get_history {
       open(FILE, "<$cachefile") ;
       while($row = <FILE>) {
          if ($row =~ /^time (.*)/) {
-             verbose("found time from history: $1", 10) ;
+             verbose("found last run time from history: $1", 10) ;
              $history{'time'} = $1 ;
          }
          if ($row =~ /^nfsops (.*)/) {
-             verbose("found last value from history: $1", 10) ;
+             verbose("found last nfsops value from history: $1", 10) ;
              $history{'nfsops'} = $1 ;
          }
       }
@@ -219,6 +227,12 @@ sub get_history {
    return(%history) ;
 }
 
+################################
+# save data to history file
+# arg1 is the history file path
+# arg2 is the history hash
+# feel free to adapt
+################################
 sub save_history {
    my $cachefile = $_[0] ;
    my $history = $_[1] ;
@@ -265,7 +279,7 @@ sub verbose {
 
     if ($messagelevel <= $loglevel) {
         print "$message\n" ;
-	}
+    }
 }
 
 sub get_table {
@@ -277,9 +291,9 @@ sub get_table {
 
     verbose("get table for oid $baseoid", "10") ;
     if ($snmp == 1) {
-    	$result = $session->get_table(-baseoid => $baseoid) ;
+        $result = $session->get_table(-baseoid => $baseoid) ;
     }else {
-    	$result = $session->get_table(-baseoid => $baseoid, -maxrepetitions => 20) ;
+        $result = $session->get_table(-baseoid => $baseoid, -maxrepetitions => 20) ;
     }
     if (!defined($result)) {
         print("UNKNOWN: SNMP get_table : ".$session->error()."\n");
@@ -289,22 +303,23 @@ sub get_table {
     my $id;
     my $index;
     my %nexus_return;
+    # this support Cisco nexus indexed tables
     while(($key,$value) = each(%nexus_values)) {
         $index = $id = $key ;
-		if ($is_indexed) {
+        if ($is_indexed) {
             $id =~ s/.*\.([0-9]+)\.[0-9]*$/$1/;
             $key =~ s/(.*)\.[0-9]*\.[0-9]*/$1/ ;
             $index =~ s/.*\.([0-9]+)$/$1/ ;
-    	    verbose("key=$key, id=$id, index=$index, value=$value", "15") ;
+            verbose("key=$key, id=$id, index=$index, value=$value", "15") ;
             $nexus_return{$id}{$key}{$index} = $value;
             $nexus_return{$id}{"id"}{$index} = $id ;
-		}else {
+        }else {
             $id =~ s/.*\.([0-9]+)$/$1/;
             $key =~ s/(.*)\.[0-9]*/$1/ ;
-    	    verbose("key=$key, id=$id, value=$value", "15") ;
+            verbose("key=$key, id=$id, value=$value", "15") ;
             $nexus_return{$id}{$key} = $value;
             $nexus_return{$id}{"id"} = $id ;
-		}
+        }
     }
     return(%nexus_return) ;
 }

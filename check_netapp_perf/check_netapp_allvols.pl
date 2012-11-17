@@ -17,15 +17,13 @@
 #
 
 use strict;
-use Switch ;
-use List::Util qw[min max];
 use Net::SNMP qw(:snmp);
 use FindBin;
 use lib "$FindBin::Bin";
 use lib "/usr/local/nagios/libexec";
 #use utils qw($TIMEOUT %ERRORS &print_revision &support);
 use Nagios::Plugin qw(%ERRORS);
-use Data::Dumper ;
+#use Data::Dumper ;
 
 use vars qw($PROGNAME);
 use Getopt::Long;
@@ -38,10 +36,6 @@ my $release = 0;
 sub print_help ();
 sub print_usage ();
 sub verbose ;
-sub get_nexus_table ;
-sub get_nexus_entries ;
-sub get_nexus_component_location ;
-sub evaluate_sensor ;
 my $opt_d = 0 ;
 Getopt::Long::Configure('bundling');
 GetOptions
@@ -168,36 +162,39 @@ my $return_code = $ERRORS{'OK'} ;
 while((my $id,$df) = each(%netapp_df)) {
     if (defined($df)) {
         my %df_data = %{$df} ;
-		my $df_volname      = $df_data{&netapp_dfTableName} ;
-		my $df_percentused  = $df_data{&netapp_dfTabledfPerCentKBytesCapacity} ;
-		my $df_highused     = $df_data{&netapp_dfTabledfHighUsedKBytes} ;
-		my $df_lowused      = $df_data{&netapp_dfTabledfLowUsedKBytes} ;
+        my $df_volname      = $df_data{&netapp_dfTableName} ;
+        my $df_percentused  = $df_data{&netapp_dfTabledfPerCentKBytesCapacity} ;
+        my $df_highused     = $df_data{&netapp_dfTabledfHighUsedKBytes} ;
+        my $df_lowused      = $df_data{&netapp_dfTabledfLowUsedKBytes} ;
 
-		if ( $df_lowused < 0 ) {
-                 $df_lowused=$df_lowused+(1<<32);
-                }
-                $df_highused=$df_highused<<32;
-              my $df_used=$df_lowused+$df_highused ;
+        if ( $df_lowused < 0 ) {
+            $df_lowused=$df_lowused+(1<<32);
+        }
+        $df_highused=$df_highused<<32;
+        my $df_used=$df_lowused+$df_highused ;
 
-		if ($df_percentused > $opt_w) {
-			if ($df_percentused > $opt_c) {
-				$return_code = $ERRORS{'CRITICAL'} ;
-			}else {
-				$return_code = $ERRORS{'WARNING'} ;
-			}
-			$label.="${df_volname}=$df_percentused% (${df_used}KBytes) " ;		
-		}
-		push(@perfparse, "${df_volname}=$df_percentused%;$opt_w;$opt_c;;") ;
+        if ($df_percentused > $opt_w) {
+            if ($df_percentused > $opt_c) {
+                $return_code = $ERRORS{'CRITICAL'} ;
+            }else {
+                $return_code = $ERRORS{'WARNING'} ;
+            }
+            $label.="${df_volname}=$df_percentused% (${df_used}KBytes) " ;		
+        }
+        push(@perfparse, "${df_volname}=$df_percentused%;$opt_w;$opt_c;;") ;
     }
 }
 
 print $outlabel.$nagios_return_code[$return_code]." $label\n" ;
 print "| ";
 foreach (@perfparse) {
-	print "$_\n" ;
+    print "$_\n" ;
 }
 exit($return_code) ;
 
+##############################
+# print help                 #
+##############################
 sub print_usage () {
     print "Usage:";
     print "$PROGNAME\n";
@@ -215,7 +212,7 @@ sub print_usage () {
     print "   -w (--warning)    pass 3 values for warning threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
     print "   -c (--critical)   pass 3 values for critical threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
     print "\n" ;
-    print "   -d (--debug)      debug level (1 -> 15)" ;
+    print "   -d (--debug)      debug level (1 -> 15)\n" ;
 }
 
 sub print_help () {
@@ -226,16 +223,20 @@ sub print_help () {
     print "\n";
 }
 
+#########################
+# print verbose messages
+#########################
 sub verbose {
     my $message = $_[0];
     my $messagelevel = $_[1] ;
-
-
     if ($messagelevel <= $loglevel) {
         print "$message\n" ;
-	}
+    }
 }
 
+#######################
+# get snmp table
+#######################
 sub get_table {
     my $baseoid = $_[0] ;    
     my $is_indexed = $_[1] ;
@@ -254,50 +255,25 @@ sub get_table {
     my $id;
     my $index;
     my %nexus_return;
+    # this section convert Cisco nexus table to perl hash
     while(($key,$value) = each(%nexus_values)) {
         $index = $id = $key ;
-		if ($is_indexed) {
+        if ($is_indexed) {
             $id =~ s/.*\.([0-9]+)\.[0-9]*$/$1/;
             $key =~ s/(.*)\.[0-9]*\.[0-9]*/$1/ ;
             $index =~ s/.*\.([0-9]+)$/$1/ ;
     	    verbose("key=$key, id=$id, index=$index, value=$value", "15") ;
             $nexus_return{$id}{$key}{$index} = $value;
             $nexus_return{$id}{"id"}{$index} = $id ;
-		}else {
+        }else {
             $id =~ s/.*\.([0-9]+)$/$1/;
             $key =~ s/(.*)\.[0-9]*/$1/ ;
     	    verbose("key=$key, id=$id, value=$value", "15") ;
             $nexus_return{$id}{$key} = $value;
             $nexus_return{$id}{"id"} = $id ;
-		}
+        }
     }
     return(%nexus_return) ;
 }
 
-sub get_nexus_entries {
-    my (@columns) = @_ ;    
-
-    verbose("get entries", "10") ;
-    if ($snmp == 1) {
-    	$result = $session->get_entries(-columns => @columns) ;
-    }else {
-    	$result = $session->get_entries(-columns => @columns, -maxrepetitions => 20) ;
-    }
-    if (!defined($result)) {
-        print("UNKNOWN: SNMP get_entries : ".$session->error()."\n");
-        exit $ERRORS{'UNKNOWN'};
-    }
-    my %nexus_values = %{$result} ;
-    my $id;
-    my %nexus_return;
-    while(($key,$value) = each(%nexus_values)) {
-        $id = $key ;
-        $id =~ s/.*\.([0-9]+)$/$1/;
-        $key =~ s/(.*)\.[0-9]*/$1/ ;
-    	verbose("key=$key, id=$id, value=$value", "15") ;
-        $nexus_return{$id}{$key} = $value;
-        $nexus_return{$id}{"id"} = $id ;
-    }
-    return(%nexus_return) ;
-}
 
