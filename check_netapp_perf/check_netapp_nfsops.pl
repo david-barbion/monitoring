@@ -193,7 +193,9 @@ save_history($cache_file, %history) ;
 # time to return information to user
 ######################################
 print $outlabel.$nagios_return_code[$return_code]." $label |" ;
-print " nfsops=".$perfparse{'nfsops'}."ops;" ;
+if (defined($perfparse{'nfsops'})) {
+  print " nfsops=".$perfparse{'nfsops'}."ops;" ;
+}
 print "\n" ;
 exit($return_code) ;
 
