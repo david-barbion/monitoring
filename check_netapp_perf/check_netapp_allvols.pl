@@ -37,6 +37,8 @@ sub print_help ();
 sub print_usage ();
 sub verbose ;
 my $opt_d = 0 ;
+$opt_w="";
+$opt_c="";
 Getopt::Long::Configure('bundling');
 GetOptions
     ("h"   => \$opt_h, "help"         => \$opt_h,
@@ -156,7 +158,7 @@ my %netapp_df = get_table(netapp_dfTable,false) ;
 # 
 ###########################################################################################
 my $df;
-my $label ;
+my $label = '';
 my $df_data;
 my $return_code = $ERRORS{'OK'} ;
 while((my $id,$df) = each(%netapp_df)) {
@@ -167,19 +169,21 @@ while((my $id,$df) = each(%netapp_df)) {
         my $df_highused     = $df_data{&netapp_dfTabledfHighUsedKBytes} ;
         my $df_lowused      = $df_data{&netapp_dfTabledfLowUsedKBytes} ;
 
+        # hack to convert 2 32bits integer to 1 64bits integer
         if ( $df_lowused < 0 ) {
             $df_lowused=$df_lowused+(1<<32);
         }
         $df_highused=$df_highused<<32;
         my $df_used=$df_lowused+$df_highused ;
 
-        if ($df_percentused > $opt_w) {
-            if ($df_percentused > $opt_c) {
+        if ($opt_w and $df_percentused > $opt_w) {
+            if ($opt_c and $df_percentused > $opt_c) {
                 $return_code = $ERRORS{'CRITICAL'} ;
             }else {
                 $return_code = $ERRORS{'WARNING'} ;
             }
-            $label.="${df_volname}=$df_percentused% (${df_used}KBytes) " ;		
+            # append overquota volume to first line output
+            $label.="${df_volname}=$df_percentused% (${df_used}KBytes) " ;
         }
         push(@perfparse, "${df_volname}=$df_percentused%;$opt_w;$opt_c;;") ;
     }
