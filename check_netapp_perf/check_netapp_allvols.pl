@@ -213,8 +213,8 @@ sub print_usage () {
     print "   -V (--version)    Plugin version\n";
     print "   -h (--help)       usage help\n\n" ;
     print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
-    print "   -w (--warning)    pass 3 values for warning threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
-    print "   -c (--critical)   pass 3 values for critical threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
+    print "   -w (--warning)    warning threshold (%)\n" ;
+    print "   -c (--critical)   critical threshold (%)\n" ;
     print "\n" ;
     print "   -d (--debug)      debug level (1 -> 15)\n" ;
 }
