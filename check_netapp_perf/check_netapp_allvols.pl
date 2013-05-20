@@ -9,7 +9,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 #    For information : david.barbion@adeoservices.com
 ####################################################################
 #
@@ -27,7 +27,7 @@ use Nagios::Plugin qw(%ERRORS);
 
 use vars qw($PROGNAME);
 use Getopt::Long;
-use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_d $opt_i);
+use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_d $opt_i $opt_I);
 use constant true  => "1" ;
 use constant false => "0" ;
 $PROGNAME = $0;
@@ -50,6 +50,7 @@ GetOptions
      "C=s" => \$opt_C, "community=s"  => \$opt_C,
      "w=s" => \$opt_w, "warning=s"    => \$opt_w,
      "c=s" => \$opt_c, "critical=s"   => \$opt_c,
+     "I=s" => \$opt_I, "ignore=s"     => \$opt_I,
      "H=s" => \$opt_H, "hostname=s"   => \$opt_H,
      "d=s" => \$opt_d, "debug=s"      => \$opt_d,
      "i"   => \$opt_i, "sysdescr"     => \$opt_i);
@@ -155,7 +156,7 @@ verbose("get netapp disk statistics table", "5") ;
 my %netapp_df = get_table(netapp_dfTable,false) ;
 
 ###########################################################################################
-# 
+#
 ###########################################################################################
 my $df;
 my $label = '';
@@ -165,6 +166,7 @@ while((my $id,$df) = each(%netapp_df)) {
     if (defined($df)) {
         my %df_data = %{$df} ;
         my $df_volname      = $df_data{&netapp_dfTableName} ;
+	next if ($opt_I ne "" && $df_volname =~ /$opt_I/);
         my $df_percentused  = $df_data{&netapp_dfTabledfPerCentKBytesCapacity} ;
         my $df_highused     = $df_data{&netapp_dfTabledfHighUsedKBytes} ;
         my $df_lowused      = $df_data{&netapp_dfTabledfLowUsedKBytes} ;
@@ -215,6 +217,7 @@ sub print_usage () {
     print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
     print "   -w (--warning)    warning threshold (%)\n" ;
     print "   -c (--critical)   critical threshold (%)\n" ;
+    print "   -I (--ignore)     regex of volume names to ignore.\n";
     print "\n" ;
     print "   -d (--debug)      debug level (1 -> 15)\n" ;
 }
@@ -242,7 +245,7 @@ sub verbose {
 # get snmp table
 #######################
 sub get_table {
-    my $baseoid = $_[0] ;    
+    my $baseoid = $_[0] ;
     my $is_indexed = $_[1] ;
 
     verbose("get table for oid $baseoid", "10") ;
@@ -279,5 +282,4 @@ sub get_table {
     }
     return(%nexus_return) ;
 }
-
 
