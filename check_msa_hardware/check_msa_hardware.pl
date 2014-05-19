@@ -10,8 +10,19 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 # 
+###################################################################
+#    Queries MSA2000 health using the fiber channel management MIB
+#    (FCMGMT-MIB). The MIB is available as fa-mib40.mib in the HP
+#    SIM MIB kit.
+#
+#    Tested with:
+#    - HP MSA2312i
+#    - HP MSA2012i
+#    - HP MSA2012fc
+#    - HP P2000 G3 MSA (iSCSI & FC)
+#
 #    For information : david.barbion@adeoservices.com
-####################################################################
+###################################################################
 #
 # Script init
 #
@@ -125,7 +136,7 @@ if (!defined($sysdescr)) {
 }
 my $outlabel = $sysdescr->{".1.3.6.1.2.1.1.1.0"}.": " ;
 
-# define some useful arrays
+# useful sensors within FCMGMT-MIB::connUnitSensorTable
 my %msa_sensors_oids = (
                         ".1.3.6.1.3.94.1.8.1.1" => "Sensor unitid",
                         ".1.3.6.1.3.94.1.8.1.2" => "Sensor index",
@@ -179,6 +190,7 @@ my @msa_sensors_characteristic = ("undefined",
                                  ) ;
 
 # get the sensor table
+# .1.3.6.1.3.94.1.8 is FCMGMT-MIB::connUnitSensorTable
 if ($snmp == 1) {
 	$result = $session->get_table(-baseoid => ".1.3.6.1.3.94.1.8") ;
 }else {
@@ -229,6 +241,32 @@ foreach $sensor (@msa_sensors) {
 			print "\n" ;
 		}
     }
+}
+
+# Check overall status (FCMGMT-MIB::connUnitStatus). This should return a
+# warning if any component is unhealthy. This is a column of the connUnitTable,
+# and the MSA only returns one row - we're looking for the first row.
+my $connUnitStatusOid = '.1.3.6.1.3.94.1.6.1.6';
+$result = $session->get_next_request(-varbindlist => [$connUnitStatusOid]);
+if (!defined($result)) {
+    print("UNKNOWN: SNMP get_next_request $connUnitStatusOid : "
+        . $session->error() . "\n");
+    exit $ERRORS{'UNKNOWN'};
+}
+if (length(keys(%$result)) != 1) {
+    print("UNKNOWN: Expected 1 connUnitStatus result, got "
+        . length(keys(%$result)) . "\n");
+    exit $ERRORS{'UNKNOWN'};
+}
+foreach my $val (values(%$result)) {
+    $worse_status = max($worse_status, $val);
+    if ($val > 3) {
+        $outlabel .= 'Overall unit status ';
+    }
+    if ($opt_l) {
+        print "connUnitStatus has status " . $msa_sensors_status[$val] . "\n";
+    }
+    last;
 }
 
 # get the return_code
