@@ -16,12 +16,13 @@
 #    SIM MIB kit.
 #
 #    Tested with:
+#    - HP MSA2324i
 #    - HP MSA2312i
 #    - HP MSA2012i
 #    - HP MSA2012fc
 #    - HP P2000 G3 MSA (iSCSI & FC)
 #
-#    For information : david.barbion@adeoservices.com
+#    For information : dbarbion@gmail.com
 ###################################################################
 #
 # Script init
@@ -60,7 +61,7 @@ GetOptions
      "l"   => \$opt_l, "list"         => \$opt_l);
 
 if ($opt_V) {
-    print_revision($PROGNAME,'$Revision: 1.1');
+    print_revision($PROGNAME,'$Revision: 1.2');
     exit $ERRORS{'OK'};
 }
 
@@ -307,9 +308,6 @@ sub print_usage () {
 }
 
 sub print_help () {
-    print "##############################################\n";
-    print "#                ADEO Services               #\n";
-    print "##############################################\n";
     print_usage();
     print "\n";
 }
