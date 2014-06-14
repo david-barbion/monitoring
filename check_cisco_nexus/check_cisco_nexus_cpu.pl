@@ -144,7 +144,7 @@ if (!defined($sysdescr)) {
 	exit $ERRORS{'UNKNOWN'};
 }
 verbose(" sysdescr is ".$sysdescr->{$outlabel_oid}, "5") ;
-my $outlabel = $sysdescr->{$outlabel_oid}.": " ;
+my $outlabel = "CPU: ";
 
 my @nagios_return_code = ("OK", "WARNING", "CRITICAL", "UNKNOWN") ;
 
@@ -196,7 +196,7 @@ while((my $id,$cpu) = each(%nexus_cpu)) {
 				$return_code = $ERRORS{'WARNING'} ;
 			}
 		}
-		$label.="cpu${id}-5_seconds=$five_sec%,cpu${id}-1_minute=$one_min%,cpu${id}-5_minutes=$five_min% " ;		
+		$label.=" - 5sec: $five_sec% - 1min: $one_min% - 5min: $five_min% " ;		
 		push(@perfparse, "cpu${id}-5_seconds=$five_sec%;$warning_threshold[&THRESHOLD_5_SECONDS];$critical_threshold[&THRESHOLD_5_SECONDS];0;100 cpu${id}-1_minute=$one_min%;$warning_threshold[&THRESHOLD_1_MINUTE];$critical_threshold[&THRESHOLD_1_MINUTE];0;100 cpu${id}-5_minutes=$five_min%;$warning_threshold[&THRESHOLD_5_MINUTES];$critical_threshold[&THRESHOLD_5_MINUTES];0;100") ;
     }
 }
