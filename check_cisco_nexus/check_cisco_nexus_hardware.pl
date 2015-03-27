@@ -29,7 +29,7 @@ use Data::Dumper ;
 
 use vars qw($PROGNAME);
 use Getopt::Long;
-use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l $opt_d $opt_i $opt_authproto $opt_priv $opt_privproto);
+use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l $opt_d $opt_i $opt_a $opt_authproto $opt_priv $opt_privproto);
 use constant true  => "1" ;
 use constant false => "0" ;
 $PROGNAME = $0;
@@ -58,6 +58,7 @@ GetOptions
      "w=s" => \$opt_w, "warning=s"    => \$opt_w,
      "c=s" => \$opt_c, "critical=s"   => \$opt_c,
      "H=s" => \$opt_H, "hostname=s"   => \$opt_H,
+     "a"   => \$opt_a, "admin"        => \$opt_a,
      "d=s" => \$opt_d, "debug=s"      => \$opt_d,
      "i"   => \$opt_i, "sysdescr"     => \$opt_i, 
      "l"   => \$opt_l, "list"         => \$opt_l);
@@ -264,6 +265,11 @@ use constant cefcFanCoolingTable     => ".1.3.6.1.4.1.9.9.117.1.7.2" ;
 use constant entSensorThresholdTable => ".1.3.6.1.4.1.9.9.91.1.2.1" ;
 use constant cefcFRUPowerStatusTable => ".1.3.6.1.4.1.9.9.117.1.1.2" ;
 
+# mib2 interface status OIDs
+use constant ifDescr                 => ".1.3.6.1.2.1.2.2.1.2";
+use constant ifAdminStatus           => ".1.3.6.1.2.1.2.2.1.7";
+
+my @nexus_admin_status = ("undefined", "up", "down", "testing") ;
 
 # Fan
 use constant cefcFanTrayOperStatus => ".1.3.6.1.4.1.9.9.117.1.4.1.1.1" ;
@@ -343,6 +349,14 @@ verbose("get entity physical table", "5") ;
 # get only selected columns to speed up data retrieving
 my %nexus_entphysical = get_nexus_entries([&entPhysicalDescr, &entPhysicalContainedIn, &entPhysicalClass]) ;
 
+###### get the physical table
+my %nexus_interface;
+if ($opt_a) {
+    verbose("get interface table", "5") ;
+    # get only selected columns to speed up data retrieving
+    %nexus_interface = get_nexus_interface([&ifDescr, &ifAdminStatus]) ;
+}
+
 # When user want to list probes
 if ($opt_l) {
 	print "List of probes:\n" ;
@@ -388,9 +402,14 @@ while( (my $id,$sensor) = each(%nexus_sensors)) {
         verbose("sensor_alarm = $worse_sensor_status (nagios_rc=".$nexus_sensor_to_nagios[$worse_sensor_status].")", "10") ;
         # put failed items in a separate table
         if ($worse_sensor_status ne NEXUS_OK) {
-            $number_of_failed_sensors++ ;
-			verbose("add new sensor status for sensor_id = ".$sensor_data{"id"}." (".get_nexus_component_location($id).") rc=".$nexus_return_code[$sensor_alarm].". type is =".$nexus_sensors_type[$sensor_data{&entSensorType}], 15) ;
-            push(@failed_items_description, $nexus_return_code[$sensor_alarm].": ".$nexus_sensors_type[$sensor_data{&entSensorType}]." (".get_nexus_component_location($sensor_data{"id"}).") is failed: $worse_sensor_description") ;
+                verbose("add new sensor status for sensor_id = ".$sensor_data{"id"}." (".get_nexus_component_location($id).") rc=".$nexus_return_code[$sensor_alarm].". type is =".$nexus_sensors_type[$sensor_data{&entSensorType}], 15) ;
+                # skip alert if interface is Admin down
+                if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
+                        verbose("not alerting on Transceiver with with interface in state ".$nexus_admin_status[$nexus_interface{$1}], 10);
+                } else {
+                        $number_of_failed_sensors++ ;
+                        push(@failed_items_description, $nexus_return_code[$sensor_alarm].": ".$nexus_sensors_type[$sensor_data{&entSensorType}]." (".get_nexus_component_location($sensor_data{"id"}).") is failed: $worse_sensor_description") ;
+                }
         }
  
         # if list option enabled, list sensor data
@@ -512,6 +531,7 @@ sub print_usage () {
     print "   -V (--version)    Plugin version\n";
     print "   -h (--help)       usage help\n\n" ;
     print "   -l (--list)       list probes\n";
+    print "   -a (--admin)      filter Transceiver alerts by adminstatus\n";
     print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
     print "\n" ;
     print "   -d (--debug)      debug level (1 -> 15)" ;
@@ -599,6 +619,16 @@ sub get_nexus_entries {
     }
     return(%nexus_return) ;
 }
+
+sub get_nexus_interface {
+    my %entries = get_nexus_entries(@_);
+    my %nexus_return;
+    for my $int (values %entries) {
+        $nexus_return{$$int{$_[0][0]}} = $$int{$_[0][1]};
+    }
+    return(%nexus_return) ;
+}
+
 sub evaluate_sensor {
     my $value     = $_[0];
     my $compare   = $_[1] ;
