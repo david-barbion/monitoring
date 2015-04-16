@@ -17,9 +17,9 @@ show_help() {
 	echo
 	echo "  -d DEVICE            DEVICE must be without /dev (ex: -d sda)"
 	echo "  -w/c TPS,READ,WRITE  TPS means transfer per seconds (aka IO/s)"
-	echo "                       READ and WRITE are in sectors per seconds"
+	echo "                       READ and WRITE are in Bytes per seconds"
 	echo
-	echo " example: $0 -d sda -w 200,100000,100000 -c 300,200000,200000"
+	echo " example: $0 -d sda -w 200,10000000,10000000 -c 300,20000000,20000000"
 }
 
 # process args
