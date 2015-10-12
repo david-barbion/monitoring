@@ -93,7 +93,9 @@ if ($snmp eq "3") {
 	}
 }
 
-($opt_C) || ($opt_C = shift) || ($opt_C = "public");
+$opt_C ||= 'public';
+$opt_w ||= '80,70,60';
+$opt_c ||= '90,80,70';
 
 my $name = $0;
 $name =~ s/\.pl.*//g;
@@ -226,8 +228,8 @@ sub print_usage () {
     print "   -V (--version)    Plugin version\n";
     print "   -h (--help)       usage help\n\n" ;
     print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
-    print "   -w (--warning)    pass 3 values for warning threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
-    print "   -c (--critical)   pass 3 values for critical threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %)\n" ;
+    print "   -w (--warning)    pass 3 values for warning threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %, default is '80,70,60')\n" ;
+    print "   -c (--critical)   pass 3 values for critical threshold (5 seconds, 1 minute and 5 minutes cpu average usage in %, default is '90,80,70')\n" ;
     print "\n" ;
     print "   -d (--debug)      debug level (1 -> 15)" ;
 }
