@@ -396,20 +396,27 @@ while( (my $id,$sensor) = each(%nexus_sensors)) {
 				# keep the alarm description for the user
                 $worse_sensor_description = "$sensor_value".$nexus_sensors_scale[$sensor_data{&entSensorScale}]." ".$nexus_sensors_type[$sensor_data{&entSensorType}]." is ".$nexus_sensors_threshold_relation[$thresh_relation]." $thresh_value" ;
             }
-			# keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
+
+			# if interface is not Admin down, keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
+	    if (defined $nexus_entphysical{$id}{&entPhysicalDescr}) {
+		unless ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
 			$worse_sensor_status = max($worse_sensor_status, $sensor_alarm) ;
+		}
+	    }
         }
         verbose("sensor_alarm = $worse_sensor_status (nagios_rc=".$nexus_sensor_to_nagios[$worse_sensor_status].")", "10") ;
         # put failed items in a separate table
         if ($worse_sensor_status ne NEXUS_OK) {
                 verbose("add new sensor status for sensor_id = ".$sensor_data{"id"}." (".get_nexus_component_location($id).") rc=".$nexus_return_code[$sensor_alarm].". type is =".$nexus_sensors_type[$sensor_data{&entSensorType}], 15) ;
-                # skip alert if interface is Admin down
-                if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
+		if (defined($nexus_entphysical{$id}{&entPhysicalDescr})) {
+                    # skip alert if interface is Admin down
+                    if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
                         verbose("not alerting on Transceiver with with interface in state ".$nexus_admin_status[$nexus_interface{$1}], 10);
-                } else {
+                    } else {
                         $number_of_failed_sensors++ ;
                         push(@failed_items_description, $nexus_return_code[$sensor_alarm].": ".$nexus_sensors_type[$sensor_data{&entSensorType}]." (".get_nexus_component_location($sensor_data{"id"}).") is failed: $worse_sensor_description") ;
-                }
+                    }
+		}
         }
  
         # if list option enabled, list sensor data
