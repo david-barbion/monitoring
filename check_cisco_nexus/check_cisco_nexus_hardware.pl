@@ -396,8 +396,13 @@ while( (my $id,$sensor) = each(%nexus_sensors)) {
 				# keep the alarm description for the user
                 $worse_sensor_description = "$sensor_value".$nexus_sensors_scale[$sensor_data{&entSensorScale}]." ".$nexus_sensors_type[$sensor_data{&entSensorType}]." is ".$nexus_sensors_threshold_relation[$thresh_relation]." $thresh_value" ;
             }
-			# keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
+
+			# if interface is not Admin down, keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
+	    if (defined $nexus_entphysical{$id}{&entPhysicalDescr}) {
+		unless ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
 			$worse_sensor_status = max($worse_sensor_status, $sensor_alarm) ;
+		}
+	    }
         }
         verbose("sensor_alarm = $worse_sensor_status (nagios_rc=".$nexus_sensor_to_nagios[$worse_sensor_status].")", "10") ;
         # put failed items in a separate table
