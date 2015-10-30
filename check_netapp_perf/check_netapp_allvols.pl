@@ -39,6 +39,7 @@ sub verbose ;
 my $opt_d = 0 ;
 $opt_w="";
 $opt_c="";
+$opt_I="";
 Getopt::Long::Configure('bundling');
 GetOptions
     ("h"   => \$opt_h, "help"         => \$opt_h,
