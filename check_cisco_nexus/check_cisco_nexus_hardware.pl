@@ -465,7 +465,7 @@ while ((my $id, $sensor) = each(%nexus_sensors)) {
 			$ent_description =~ s/,//g;
 			#sometimes the entPhysicalDescr is the same for more than one sensor.
 			#let's add "id" to differentiate the variable name in perf data
-            $ent_description .= '_' . $sensor_data{"id"};
+			$ent_description .= '_' . $sensor_data{"id"};
 			push(@perfparse, $ent_description . "=" . $sensor_data{&entSensorValue} . $nexus_sensors_type[ $sensor_data{&entSensorType} ] . ";;;;");
 		}
 
