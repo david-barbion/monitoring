@@ -40,7 +40,7 @@ use Nagios::Plugin qw(%ERRORS);
 
 use vars qw($PROGNAME);
 use Getopt::Long;
-use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l);
+use vars qw($opt_h $opt_V $opt_H $opt_P $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l);
 
 $PROGNAME = $0;
 sub print_help ();
@@ -58,6 +58,7 @@ GetOptions
      "w=s" => \$opt_w, "warning=s"    => \$opt_w,
      "c=s" => \$opt_c, "critical=s"   => \$opt_c,
      "H=s" => \$opt_H, "hostname=s"   => \$opt_H,
+     "P=i" => \$opt_P, "port=i"       => \$opt_P,
      "l"   => \$opt_l, "list"         => \$opt_l);
 
 if ($opt_V) {
@@ -93,6 +94,7 @@ if ($snmp eq "3") {
 }
 
 ($opt_C) || ($opt_C = shift) || ($opt_C = "public");
+($opt_P) || ($opt_P = shift) || ($opt_P = 161);
 
 my $DS_type = "GAUGE";
 ($opt_t) || ($opt_t = shift) || ($opt_t = "GAUGE");
@@ -107,11 +109,25 @@ my $day = 0;
 
 my ($session, $error);
 if ($snmp eq "1" || $snmp eq "2") {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -community => $opt_C, -version => $snmp);
+  ($session, $error) = Net::SNMP->session(
+    -hostname  => $opt_H,
+    -port      => $opt_P,
+    -community => $opt_C,
+    -version   => $snmp);
 }elsif ($opt_k) {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp, -username => $opt_u, -authkey => $opt_k);
+  ($session, $error) = Net::SNMP->session(
+    -hostname => $opt_H,
+    -port     => $opt_P,
+    -version  => $snmp,
+    -username => $opt_u,
+    -authkey  => $opt_k);
 }elsif ($opt_p) {
-	($session, $error) = Net::SNMP->session(-hostname => $opt_H, -version => $snmp,  -username => $opt_u, -authpassword => $opt_p);
+  ($session, $error) = Net::SNMP->session(
+    -hostname     => $opt_H,
+    -port         => $opt_P,
+    -version      => $snmp,
+    -username     => $opt_u,
+    -authpassword => $opt_p);
 }
 # check that session opened
 if (!defined($session)) {
@@ -295,6 +311,7 @@ sub print_usage () {
     print "Usage:";
     print "$PROGNAME\n";
     print "   -H (--hostname)   Hostname to query - (required)\n";
+    print "   -P (--port)       SNMP port\n";
     print "   -C (--community)  SNMP read community (defaults to public,\n";
     print "                     used with SNMP v1 and v2c\n";
     print "   -v (--snmp_version)  1 for SNMP v1 (default)\n";
