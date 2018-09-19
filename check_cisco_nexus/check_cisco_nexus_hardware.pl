@@ -30,7 +30,7 @@ use Data::Dumper;
 
 use vars qw($PROGNAME);
 use Getopt::Long;
-use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_o $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l $opt_d $opt_i $opt_a $opt_authproto $opt_priv $opt_privproto);
+use vars qw($opt_h $opt_V $opt_H $opt_C $opt_v $opt_c $opt_w $opt_t $opt_p $opt_k $opt_u $opt_l $opt_d $opt_i $opt_a $opt_o $opt_authproto $opt_priv $opt_privproto);
 use constant true  => "1";
 use constant false => "0";
 $PROGNAME = $0;
@@ -71,6 +71,8 @@ GetOptions(
 	"hostname=s"     => \$opt_H,
 	"a"              => \$opt_a,
 	"admin"          => \$opt_a,
+	"o"              => \$opt_o,
+	"oper"          => \$opt_o,
 	"d=s"            => \$opt_d,
 	"debug=s"        => \$opt_d,
 	"i"              => \$opt_i,
@@ -272,8 +274,9 @@ use constant cefcFRUPowerStatusTable => ".1.3.6.1.4.1.9.9.117.1.1.2";
 # mib2 interface status OIDs
 use constant ifDescr       => ".1.3.6.1.2.1.2.2.1.2";
 use constant ifAdminStatus => ".1.3.6.1.2.1.2.2.1.7";
+use constant ifOperStatus => ".1.3.6.1.2.1.2.2.1.8";
 
-my @nexus_admin_status = ("undefined", "up", "down", "testing");
+my @nexus_admin_oper_status = ("undefined", "up", "down", "testing");
 
 # Fan
 use constant cefcFanTrayOperStatus => ".1.3.6.1.4.1.9.9.117.1.4.1.1.1";
@@ -355,11 +358,16 @@ my %nexus_entphysical = get_nexus_entries([ &entPhysicalDescr, &entPhysicalConta
 
 ###### get the physical table
 my %nexus_interface;
-if ($opt_a) {
+if ($opt_a || $opt_o) {
 	verbose("get interface table", "5");
 
 	# get only selected columns to speed up data retrieving
-	%nexus_interface = get_nexus_interface([ &ifDescr, &ifAdminStatus ]);
+	if ($opt_a) {
+		%nexus_interface = get_nexus_interface([ &ifDescr, &ifAdminStatus ]);
+	}
+	else {
+		%nexus_interface = get_nexus_interface([ &ifDescr, &ifOperStatus ]);
+	}
 }
 
 # When user want to list probes
@@ -410,9 +418,9 @@ while ((my $id, $sensor) = each(%nexus_sensors)) {
 					. " $thresh_value";
 			}
 
-			# if interface is not Admin down, keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
+			# if interface is not Admin/Oper down, keep only the worst sensor status (critical status not overwritten by minor status) for the current sensor
 			if (defined $nexus_entphysical{$id}{&entPhysicalDescr}) {
-				unless ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
+				unless (($opt_a || $opt_o) and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+)( Lane \d+)? Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
 					$worse_sensor_status = max($worse_sensor_status, $sensor_alarm);
 				}
 			}
@@ -431,9 +439,9 @@ while ((my $id, $sensor) = each(%nexus_sensors)) {
 			);
 			if (defined($nexus_entphysical{$id}{&entPhysicalDescr})) {
 
-				# skip alert if interface is Admin down
-				if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
-					verbose("not alerting on Transceiver with with interface in state " . $nexus_admin_status[ $nexus_interface{$1} ], 10);
+				# skip alert if interface is Admin/Oper down
+				if (($opt_a || $opt_o) and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+)( Lane \d+)? Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
+					verbose("not alerting on Transceiver with interface in state " . $nexus_admin_oper_status[ $nexus_interface{$1} ], 10);
 				}
 				else {
 					$number_of_failed_sensors++;
@@ -570,6 +578,7 @@ sub print_usage ()
 	print "   -h (--help)       usage help\n\n";
 	print "   -l (--list)       list probes\n";
 	print "   -a (--admin)      filter Transceiver alerts by adminstatus\n";
+	print "   -o (--oper)      filter Transceiver alerts by operstatus\n";
 	print "   -i (--sysdescr)   use sysdescr instead of sysname for label display\n";
 	print "\n";
 	print "   -d (--debug)      debug level (1 -> 15)";
