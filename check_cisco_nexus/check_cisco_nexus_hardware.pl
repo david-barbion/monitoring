@@ -404,7 +404,7 @@ while( (my $id,$sensor) = each(%nexus_sensors)) {
         if ($worse_sensor_status ne NEXUS_OK) {
                 verbose("add new sensor status for sensor_id = ".$sensor_data{"id"}." (".get_nexus_component_location($id).") rc=".$nexus_return_code[$sensor_alarm].". type is =".$nexus_sensors_type[$sensor_data{&entSensorType}], 15) ;
                 # skip alert if interface is Admin down
-                if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+) Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
+                if ($opt_a and $nexus_entphysical{$id}{&entPhysicalDescr} =~ /(\S+)( Lane \d+)? Transceiver/ and defined $nexus_interface{$1} and $nexus_interface{$1} != 1) {
                         verbose("not alerting on Transceiver with with interface in state ".$nexus_admin_status[$nexus_interface{$1}], 10);
                 } else {
                         $number_of_failed_sensors++ ;
